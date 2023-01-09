@@ -29,6 +29,19 @@ export const loader = async ({ context }: LoaderArgs) => {
   //https://drand.cloudflare.com/8990e7a9aaed2ffed73dbd7092123d6f289930540d7651336225dc172e51b2ce/public/latest
   //{ "round": 2594419, "randomness": "eefd84d26b6fb1ae46a61c578e62668c89cc5cf0a67d7ff566d6889b3d469838", "signature": "89fdcc1b5c1440479520a8cf7d8fd657cee196026a8709e1ffc5020a7eea2f9331f2ed6784c794e8ae792e9f4563885b169372080e9fe2aeef63f5ad71d60309711441370a5e2d6788d5d9f341336d0146353d8da0b2791edf35aa403385dc12", "previous_signature": "9611f3413530706f86e0745882041add0ec71aa9684e960602362a5dfdee0371cf5aae2e4f319395a937d8b21117ad3f193b555af0f8315a4d943461538c8f184615b6e4ec7f7e013628fa8d253b3535fd091e1f29b9c077ba13c849188c80f2" }
 
+  const db = context.REMVI_DB
+
+  await db.exec('DROP TABLE IF EXISTS Customers;')
+  await db.exec(
+    'CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY (`CustomerID`));'
+  )
+  await db.exec(
+    `INSERT INTO Customers (CustomerID, CompanyName, ContactName) VALUES (1, 'Alfreds Futterkiste', 'Maria Anders'), (4, 'Around the Horn', 'Thomas Hardy'), (11, 'Bs Beverages', 'Victoria Ashworth'), (13, 'Bs Beverages', 'Random Name');`
+  )
+  const stmt = db.prepare('SELECT CustomerID, CompanyName FROM Customers LIMIT 3')
+  const { results } = await stmt.all()
+  console.log('DB RESULTS', results)
+
   await context.REMVI_KV.put('hmm', 'ahoy', {
     metadata: { more: 'here', type: 'sms' },
   })
@@ -38,11 +51,12 @@ export const loader = async ({ context }: LoaderArgs) => {
     posts: await getPosts(),
     secret: context.SOME_SECRET,
     list: JSON.stringify(list),
+    results,
   })
 }
 
 export default function Index() {
-  const { posts, secret, list } = useLoaderData<typeof loader>()
+  const { posts, secret, list, results } = useLoaderData<typeof loader>()
   console.log(posts)
 
   return (
@@ -51,6 +65,7 @@ export default function Index() {
       <ul>
         <li>A secret: {secret}</li>
         <li>A KV list: {list}</li>
+        <li>DB Results: {JSON.stringify(results)}</li>
         <li>
           <a target='_blank' href='https://remix.run/docs' rel='noreferrer'>
             Remix Docs

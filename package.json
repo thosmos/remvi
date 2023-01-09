@@ -8,7 +8,7 @@
     "dev": "remix build && run-p \"dev:*\"",
     "start": "cross-env NODE_ENV=production npm run wrangler",
     "typecheck": "tsc -b",
-    "wrangler": "wrangler pages dev ./public --kv REMVI_KV"
+    "wrangler": "wrangler pages dev ./public --kv REMVI_KV --d1 REMVI_DB"
   },
   "dependencies": {
     "@remix-run/cloudflare": "^1.9.0",
@@ -24,6 +24,7 @@
     "@remix-run/eslint-config": "^1.9.0",
     "@types/react": "^18.0.25",
     "@types/react-dom": "^18.0.8",
+    "better-sqlite3": "^7.6.2",
     "eslint": "^8.27.0",
     "npm-run-all": "^4.1.5",
     "typescript": "^4.8.4",
