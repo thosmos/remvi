@@ -1,4 +1,4 @@
-import type { MetaFunction } from "@remix-run/cloudflare";
+import type { MetaFunction, LinksFunction, ActionArgs } from '@remix-run/cloudflare'
 import {
   Links,
   LiveReload,
@@ -6,32 +6,38 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-} from "@remix-run/react";
+} from '@remix-run/react'
+
+import styles from './tailwind.css'
+export const links: LinksFunction = () => [
+  { rel: 'stylesheet', href: styles },
+  { rel: 'stylesheet', href: 'https://rsms.me/inter/inter.css' },
+]
 
 export const meta: MetaFunction = () => ({
-  charset: "utf-8",
-  title: "New Remix App",
-  viewport: "width=device-width,initial-scale=1",
-});
+  charset: 'utf-8',
+  title: 'remvi',
+  viewport: 'width=device-width,initial-scale=1',
+})
 
 export default function App() {
   return (
-    <html lang="en">
+    <html lang='en-US'>
       <head>
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className='bg-gray-800 text-white'>
         <Outlet />
         <ScrollRestoration />
         <Scripts />
         <LiveReload />
       </body>
     </html>
-  );
+  )
 }
 
-export function ErrorBoundary({ error }) {
+export function ErrorBoundary({ error }: { error: Error }) {
   console.error(error)
   return (
     <html>
