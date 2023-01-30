@@ -1,5 +1,6 @@
 import { ActionArgs } from '@remix-run/cloudflare'
 import { phone as parsePhone } from 'phone'
+import { json } from 'react-router'
 import { Data } from '~/types'
 
 export const emailRegex =
@@ -37,25 +38,17 @@ export const verify = async (env: Data, to: string, channel: string) => {
     method: 'POST',
     headers: { Authorization: `Basic ${btoa(env.TWILIO_UID + ':' + env.TWILIO_KEY)}` },
   }
-  try {
-    const response = await fetch(url, init)
+  const response = await fetch(url, init)
 
-    console.log('VERIFY RESULT', response)
+  // console.log('VERIFY RESULT', response)
 
-    if (response.status < 300) {
-      const res = await response.json()
-      const { date_updated, channel, to } = res as Data
-      console.log('VERIFY RES', res)
-
-      //   await env.WTF_unverified.put(to, JSON.stringify(res), {
-      //     metadata: { date: date_updated, type: channel },
-      //   })
-      return res
-    }
-  } catch (err) {
-    console.error('VERIFY ERR', err)
+  if (response.status < 300) {
+    const res = await response.json()
+    // const { date_updated, channel, to } = res as Data
+    // console.log('VERIFY RES', res)
+    return res
   }
-  return
+  throw json({ message: 'hmm, something weird happened' }, { status: 500 })
 }
 
 export const check = async (env: Data, to: string, code: string) => {
@@ -71,26 +64,18 @@ export const check = async (env: Data, to: string, code: string) => {
     method: 'POST',
     headers: { Authorization: `Basic ${btoa(env.TWILIO_UID + ':' + env.TWILIO_KEY)}` },
   }
-  try {
-    const response = await fetch(url, init)
-    console.log('CHECK RESULT', response)
+  const response = await fetch(url, init)
+  // console.log('CHECK RESULT', response)
 
-    if (response.status < 300) {
-      const res = (await response.json()) as Data
-      console.log('CHECK RES', res)
-      if (res.status === 'approved') {
-        const { date_updated, channel, to } = res
-        // await env.WTF_unverified.delete(to)
-        // await env.WTF.put(to, JSON.stringify(res), {
-        //   metadata: { date: date_updated, type: channel },
-        // })
-        return res
-      }
+  if (response.status < 300) {
+    const res = (await response.json()) as Data
+    // console.log('CHECK RES', res)
+    if (res.status === 'approved') {
+      // const { date_updated, channel, to } = res as Data
+      return res
     }
-  } catch (err) {
-    console.error('CHECK ERR', err)
   }
-  return
+  throw json({ message: 'hmm, something weird happened' }, { status: 500 })
 }
 
 export async function onAction(args: ActionArgs) {

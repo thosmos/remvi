@@ -5,17 +5,25 @@ import {
   LoaderFunction,
   SessionData,
 } from '@remix-run/cloudflare'
-import { Form, Link, useActionData, useLoaderData, useTransition } from '@remix-run/react'
+import {
+  Form,
+  Link,
+  useActionData,
+  useCatch,
+  useLoaderData,
+  useTransition,
+} from '@remix-run/react'
 import { phone as parsePhone } from 'phone'
-import { FocusEvent, useState } from 'react'
+import { FocusEvent, useEffect, useRef, useState } from 'react'
 import invariant from 'tiny-invariant'
 import { check, verify } from '~/api/verify'
 import { EnvData } from '~/types'
 import { ExclamationCircleIcon } from '@heroicons/react/20/solid'
-import { ValidatedForm } from 'remix-validated-form'
+import { useField, ValidatedForm } from 'remix-validated-form'
 import { withZod } from '@remix-validated-form/with-zod'
 import { z } from 'zod'
 import FormInput from '~/components/FormInput'
+import { CatchValue } from '@remix-run/react/dist/transition'
 
 const codeRegex = /^\d{4}$/
 
@@ -68,7 +76,8 @@ export async function action({ request, params, context }: ActionArgs) {
     if (result) {
       return json({
         verify: true,
-        message: 'We sent an sms with a link to join, or copy the code to verify here',
+        message:
+          'We sent an sms with a verification code that expires in 10 mins. Enter it below.',
       })
     }
 
@@ -93,19 +102,15 @@ export default function Index() {
   const { authed, userId } = useLoaderData()
   const actionData = useActionData()
   const transition = useTransition()
+  const verifyRef = useRef(null)
+
+  const submitting = transition.state === 'submitting'
 
   console.log('ACTION DATA', actionData)
 
-  const [phoneError, setPhoneError] = useState('')
-  const checkPhone = (e: any) => {
-    const phone = parsePhone(e.target.value)
-    if (!phone.isValid) setPhoneError('Invalid number')
-    else setPhoneError('')
-  }
-
   const state: 'idle' | 'error' | 'verify' | 'authed' = authed
     ? 'authed'
-    : actionData?.error || phoneError
+    : actionData?.error
     ? 'error'
     : actionData?.verify
     ? 'verify'
@@ -115,6 +120,11 @@ export default function Index() {
 
   const isError = state === 'error'
   const isVerify = state === 'verify'
+  const message = isVerify && actionData?.message
+
+  useEffect(() => {
+    // if(action)
+  }, [transition])
 
   return (
     <>
@@ -125,89 +135,53 @@ export default function Index() {
 
         <div className='mt-8 sm:mx-auto sm:w-full sm:max-w-md'>
           <div className='bg-white text-gray-800 py-8 px-4 shadow sm:rounded-lg sm:px-10'>
-            <ValidatedForm className='space-y-6' validator={validator} method='post'>
-              <FormInput name='phone' label='Mobile Phone' type='phone' />
-              {/* <div>
-                <label
-                  htmlFor='phone'
-                  className='block text-sm font-medium text-gray-700'>
-                  Mobile phone
-                </label>
-                <div className='relative mt-1 rounded-md shadow-sm'>
-                  <input
-                    id='phone'
-                    name='phone'
-                    type='phone'
-                    autoComplete='phone'
-                    onBlur={e => checkPhone(e)}
-                    onChange={e => (isError ? checkPhone(e) : '')}
-                    required
-                    className={`block w-full rounded-md border focus:outline-none sm:text-sm shadow-sm px-3 py-2 pr-10 ${
-                      isError
-                        ? ' border-red-300 text-red-900 placeholder-red-300 focus:border-red-500  focus:ring-red-500 '
-                        : ' text-gray-800 border-gray-300  placeholder-gray-400  focus:border-indigo-500 focus:ring-indigo-500 '
-                    }`}
-                  />
-                  {isError ? (
-                    <div className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3'>
-                      <ExclamationCircleIcon
-                        className='h-5 w-5 text-red-500'
-                        aria-hidden='true'
-                      />
-                    </div>
-                  ) : (
-                    ''
-                  )}
-                </div>
-                <p className='mt-2 text-sm text-red-600'>
-                  {actionData?.error ? actionData.message : phoneError ? phoneError : ''}
-                </p>
-              </div> */}
+            <ValidatedForm className={`space-y-6`} validator={validator} method='post'>
+              <FormInput
+                name='phone'
+                label='Mobile Phone'
+                type='phone'
+                readOnly={submitting || isVerify}
+              />
+              <div className='sm:text-sm'>{message}</div>
 
-              {isVerify || true ? (
-                <FormInput name='code' label='Verify code' />
+              {isVerify ? (
+                <>
+                  <FormInput
+                    ref={verifyRef}
+                    name='code'
+                    label='Verify code'
+                    readOnly={submitting}
+                  />
+
+                  {/* <div className='flex items-center justify-between'>
+                    <div className='flex items-center'>
+                      <input
+                        id='remember'
+                        name='remember'
+                        type='checkbox'
+                        readOnly={submitting}
+                        className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
+                      />
+                      <label
+                        htmlFor='remember'
+                        className='ml-2 block text-sm text-gray-900'>
+                        Remember me
+                      </label>
+                    </div>
+                  </div> */}
+                </>
               ) : (
-                // <div>
-                //   <label
-                //     htmlFor='code'
-                //     className='block text-sm font-medium text-gray-700'>
-                //     Verify code
-                //   </label>
-                //   <div className='mt-1'>
-                //     <input
-                //       id='code'
-                //       name='code'
-                //       type='number'
-                //       autoComplete='code'
-                //       maxLength={4}
-                //       required
-                //       className='block w-full appearance-none rounded-md border text-gray-800 border-gray-300 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm'
-                //     />
-                //   </div>
-                // </div>
                 ''
               )}
-              <div className='flex items-center justify-between'>
-                <div className='flex items-center'>
-                  <input
-                    id='remember'
-                    name='remember'
-                    type='checkbox'
-                    className='h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500'
-                  />
-                  <label htmlFor='remember' className='ml-2 block text-sm text-gray-900'>
-                    Remember me
-                  </label>
-                </div>
-              </div>
 
               <div>
                 <button
                   type='submit'
                   name='intent'
                   value={isVerify ? 'check' : 'signin'}
+                  disabled={submitting}
                   className='flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'>
-                  Sign in
+                  {submitting ? 'Sending ...' : isVerify ? 'Verify' : 'Sign in'}
                 </button>
               </div>
             </ValidatedForm>
@@ -215,6 +189,19 @@ export default function Index() {
         </div>
       </div>
     </>
+  )
+}
+
+export function CatchBoundary() {
+  const caught = useCatch()
+  console.log(caught)
+  return (
+    <div>
+      <p>
+        {caught.status} {caught.statusText}
+      </p>
+      <p>{JSON.stringify(caught.data)}</p>
+    </div>
   )
 }
 
